@@ -164,6 +164,7 @@ char * getWordByIndexes(char linea[4096], int initIndex, int endIndex) {
   return result;
 }
 
+// Función auxiliar conseguida en la web
 void removerCaracteres(char *cadena, char *caracteres) {
   int indiceCadena = 0, indiceCadenaLimpia = 0;
   int deberiaAgregarCaracter = 1;
@@ -215,12 +216,12 @@ int obtenerCalculo(int opcion, char **contenido, FILE *csv, FILE *html) {
     if (strcmp(contenido[1], columnaCdo) == 0 && atoi(contenido[8]) > 200) {
       
       if ((atoi(contenido[3]) < atoi(contenido[8])) && (atoi(contenido[4]) < atoi(contenido[8]))) {
-        char row[] = "<tr style=\"color:green;\"><td>";
+        char row[] = "<tr style=\"color:green;\"><td style=\"border: 1px solid black\">";
         strcat(row, contenido[0]);
         strcat(row, "</td></tr>");
         fprintf(html, "%s", row);
       } else {
-        char row[] = "<tr><td>";
+        char row[] = "<tr><td style=\"border: 1px solid black\">";
         strcat(row, contenido[0]);
         strcat(row, "</td></tr>");
         fprintf(html, "%s", row);
@@ -277,14 +278,14 @@ int lecturaArchivoHTML(int opcion, FILE *csv, FILE *html) {
   pclose(cmd);
 }
 
-int obtenerCsv(FILE *file) {
+int obtenerEncabezadoCsv(FILE *file) {
   char encabezado[] = "Especie; Precio de compra; Precio de venta; Apertura; Promedio;";
   fprintf(file, "%s \n", encabezado);
   return true;
 }
 
 int obtenerInicioTabla(FILE *file) {
-  char table[] = "<HTML><BODY><table><tbody>";
+  char table[] = "<HTML><BODY><table style=\"border: 1px solid black\"><thead><tr><th style=\"border: 1px solid black\">Especie</th></tr></thead><tbody>";
   fprintf(file, "%s \n", table);
   return true;
 }
@@ -296,7 +297,7 @@ int obtenerFinTabla(FILE *file) {
 }
 
 int main(void) {
-  char opcion[100];
+  char opcion[1];
   opcionesHabilitadas();
   gets(opcion);
 
@@ -308,7 +309,7 @@ int main(void) {
   FILE *csv;
   if (atoi(opcion) == 2) {
     csv = fopen("promedio.csv", "w");
-    obtenerCsv(csv);
+    obtenerEncabezadoCsv(csv);
   }
 
   FILE *html;
