@@ -1,32 +1,10 @@
 # include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include<stdbool.h>
 
 FILE *popen(const char *command, const char *mode);
 int pclose(FILE *stream);
-
-void removeLeading(char *str, char *str1) {
-	int idx = 0, j, k = 0;
-
-	// Iterate String until last
-	// leading space character
-	while (str[idx] == ' ' || str[idx] == '\t' || str[idx] == '\n')
-	{
-		idx++;
-	}
-
-	// Run a for loop from index until the original
-	// string ends and copy the content of str to str1
-	for (j = idx; str[j] != '\0'; j++)
-	{
-		str1[k] = str[j];
-		k++;
-	}
-
-	// Insert a string terminating character
-	// at the end of new string
-	str1[k] = '\0';
-}
 
 void opcionesHabilitadas() {
   printf("Por favor inserte un número: \n");
@@ -36,114 +14,285 @@ void opcionesHabilitadas() {
   printf("4) Listado de acciones que tienen menor y mayor %% de variación.\n");
 }
 
-void obtenerContenidoHtml(char *etiquetaHtml, char *contenido) {
-  int i = 0;
-  int esContenido;
-  char *simboloI = "<";
-  char *simboloC = ">";
-  for (i = 0; i < strlen(etiquetaHtml); i++) {
-    char *caracterActual = &etiquetaHtml[i];
-  printf("llego a obtencion %s", caracterActual);
-    if (caracterActual == simboloI) esContenido = 1;
-    if (caracterActual == simboloC) esContenido = 0;
-    if (!esContenido && caracterActual != ">") {
-      printf("%s", contenido);
-      strcat(contenido, caracterActual);
+char * contenidoTd(char linea[4096], int posicion) {
+  int k = posicion;
+  char* campo = malloc(100 * sizeof(char*));
+  int camp = 0;
+  while (k != 0) {
+    k++;
+    if (linea[k] == '<') {
+      k = 0;
+      campo[camp] = '\0';
+    } else {
+      campo[camp] = linea[k]; 
+      camp++;
     }
   }
+  return campo;
 }
 
-int lecturaTabla(FILE *archivo, int opcion) {
-  char *et_table_cerrada = "</table>\n\0";
-  char *et_thead_abierta = "<thead>";
-  char *et_thead_cerrada = "</thead>";
-  char *et_tbody_abierta = "<tbody>";
-  char *et_tbody_cerrada = "</tbody>";
-  char *et_tr_abierta = "<tr";
-  char *et_tr_cerrada = "</tr>";
-  char result[2048];
-
-  // Columnas a trabajar
-  int columna_accion = 0;
-  int columna_vto = 0;
-  int columna_compra = 0;
-  int columna_venta = 0;
-  int columna_apertura = 0;
-  int columna_variacion = 0;
-
-  // Variables auxiliares 
-  int tHead = 1;
-  int tBody = 1;
-  int tR = 1;
-  int contadorColumnas = -1;
-  int contadorFilas = -1;
-
-  // Variables de operaciones
-  // Punto 1
-  char *accion;
-  int accionContado;
-  float accionApertura;
-
-
-  while(fgets(result, sizeof(result), archivo) != NULL && strstr(result, et_table_cerrada) == NULL) {
-    if (strstr(result, et_thead_abierta)) {
-      tHead = 0;
-      tBody = 1;
+char * lecturaTd(char linea[4096], int posicion) {
+  int j = posicion;
+  char *resultado;
+  while (j != 0) {
+    j++;
+    if (linea[j] == '>') {
+      resultado = contenidoTd(linea, j);
+      if (strlen(resultado) == 0) strcpy(resultado, "-\0");
     }
-    if (strstr(result, et_tbody_abierta)) {
-      tBody = 0;
-      tHead = 1;
-    }
-    if (strstr(result, et_tr_abierta)) {
-      tR = 0;
-      contadorFilas = -1;
-    }
-    if (strstr(result, et_thead_cerrada)) tHead = 1;
-    if (strstr(result, et_tbody_cerrada)) tBody = 1;
-    if (strstr(result, et_tr_cerrada)) tR = 1;
+    if(linea[j] == '<') j = 0;
+  }
+  return resultado;
+}
 
-    if (tHead == 0 && tR == 0) {
-      if (strstr(result, "Especie</th>")) columna_accion = contadorColumnas;
-      if (strstr(result, "Vto</th>")) columna_vto = contadorColumnas;
-      if (strstr(result, "Compra</th>")) columna_compra = contadorColumnas;
-      if (strstr(result, "Venta</th>")) columna_venta = contadorColumnas;
-      if (strstr(result, "Apertura</th>")) columna_apertura = contadorColumnas;
-      if (strstr(result, "Variación</th>")) columna_variacion = contadorColumnas;
-      contadorColumnas++;
-    }
-
-    if (tBody == 0 && tR == 0) {
-      if (contadorFilas == columna_accion) obtenerContenidoHtml(result, accion);
-      if (opcion == 1) {
-        if (contadorFilas == columna_vto && strstr(result, "Vto</th>")) {
-
+char ** lecturaHastaTd(char linea[4096]) {
+  int i = 0;
+  int index = 0;         
+  char ** results = malloc(16 * sizeof(char*));
+  for(int j = 0; j < 16; j++){
+    results[j] = (char*)malloc(50*sizeof(char));
+  }
+  while (i < 4096 && linea[i]!= '\0') {
+    if (linea[i] == '<') {
+      i++;
+      if (linea[i] == 't') {
+        i++;
+        if (linea[i] == 'd') {
+            int posicionTd = i;
+            char *resultado = lecturaTd(linea, posicionTd);
+            sprintf(results[index], resultado);
+            index++;
         }
       }
-      contadorFilas++;
     }
-
+    i++;
   }
-  printf("resultado de lectura tabla %s", result);
-  printf("posicion vto: %d \n", columna_vto);
-  printf("posicion compra: %d \n", columna_compra);
-  printf("posicion venta: %d \n", columna_venta);
-  printf("posicion apertura: %d \n", columna_apertura);
-  printf("posicion variacion: %d \n", columna_variacion);
-  printf("contenido: %s \n", accion);
+  return results;
+}
+
+int endTD(char linea[4096]) {
+  int i = 0;
+  while (i < 4096 && linea[i]!= '\0') {
+    if (linea[i] == '<') {
+      i++;
+      if (linea[i] == '/') {
+        i++;
+        if (linea[i] == 't') {
+          i++;
+          if (linea[i] == 'd') {
+            i++;
+            if (linea[i] == '>') {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    i++;
+  }
+  return false;
+}
+
+int getIndexEndTD(char linea[4096]) {
+  int i = 0;
+  while (i < 4096 && linea[i]!= '\0') {
+    if (linea[i] == '<') {
+      i++;
+      if (linea[i] == '/') {
+        i++;
+        if (linea[i] == 't') {
+          i++;
+          if (linea[i] == 'd') {
+            i++;
+            if (linea[i] == '>') {
+              return i - 4;
+            }
+          }
+        }
+      }
+    }
+    i++;
+  }
+  return false;
+}
+
+int getIndexStartEndTD(char linea[4096], int endIndex) {
+  int i = endIndex;
+  while (i > 0) {
+    if (linea[i - 1] == '>') {
+      return i - 1;
+    }
+    i--;
+  }
   return 0;
 }
 
-int lecturaArchivoHTML(int opcion) {
-  char *et_html_abierta = "<HTML>\n\0";
-  char *et_html_cerrada = "</HTML>\n\0";
-  char *et_table_abierta = "<table";
-
-  FILE *cmd = popen("C:\\Users\\vivia\\Downloads\\wget -q -O - http://localhost:5000/static/", "r");
-  char result[2048];
-  while(fgets(result, sizeof(result), cmd) != NULL) {
-    if (strstr(result, et_table_abierta)) lecturaTabla(cmd, opcion);
+int isTD(char linea[4096]) {
+  int i = 0;
+  while (i < 4096 && linea[i]!= '\0') {
+    if (linea[i] == '<') {
+      i++;
+      if (linea[i] == 't') {
+        i++;
+        if (linea[i] == 'd') {
+          i++;
+          if (linea[i] == ' ') {
+            return true;
+          }
+        }
+      }
+    }
+    i++;
   }
+  return 0;
+}
+
+char * getWordByIndexes(char linea[4096], int initIndex, int endIndex) {
+  int indexChar = 0;
+  int i = 0;
+  char *result = malloc(100);
+  
+  while (i < endIndex) {
+
+    if (i > initIndex){
+      result[indexChar] = linea[i];
+      indexChar++;
+    }
+    i++;
+  }
+  result[indexChar] = '\0';
+  return result;
+}
+
+void removerCaracteres(char *cadena, char *caracteres) {
+  int indiceCadena = 0, indiceCadenaLimpia = 0;
+  int deberiaAgregarCaracter = 1;
+  // Recorrer cadena carácter por carácter
+  while (cadena[indiceCadena]) {
+    // Primero suponemos que la letra sí debe permanecer
+    deberiaAgregarCaracter = 1;
+    int indiceCaracteres = 0;
+    // Recorrer los caracteres prohibidos
+    while (caracteres[indiceCaracteres]) {
+      // Y si la letra actual es uno de los caracteres, ya no se agrega
+      if (cadena[indiceCadena] == caracteres[indiceCaracteres]) {
+        deberiaAgregarCaracter = 0;
+      }
+      indiceCaracteres++;
+    }
+    // Dependiendo de la variable de arriba, la letra se agrega a la "nueva
+    // cadena"
+    if (deberiaAgregarCaracter) {
+      cadena[indiceCadenaLimpia] = cadena[indiceCadena];
+      indiceCadenaLimpia++;
+    }
+    indiceCadena++;
+  }
+  // Al final se agrega el carácter NULL para terminar la cadena
+  cadena[indiceCadenaLimpia] = 0;
+}
+
+int obtenerCalculo(int opcion, char **contenido, FILE *csv, FILE *html) {
+  const char* columnaCdo = "Cdo.";
+  if (opcion == 1) {
+    char caracter[] = ".";
+    removerCaracteres(contenido[8], caracter);
+    if (strcmp(contenido[1], columnaCdo) == 0 && atoi(contenido[8]) > 200)
+    printf("Accion con apertura mayor a 200: %s \n", contenido[0]);
+  }
+  if (opcion == 2) {
+    if (strcmp(contenido[1], columnaCdo)) {
+      fprintf(csv, "%s;", contenido[0]); // Especie
+      fprintf(csv, "%s;", contenido[3]); // Compra
+      fprintf(csv, "%s;", contenido[4]); // Venta
+      fprintf(csv, "%s;", contenido[8]); // Apertura
+      fprintf(csv, "%d; \n", (atoi(contenido[3]) + atoi(contenido[4])) / 2);
+    }
+  }
+  if (opcion == 3) {
+    char caracter[] = ".";
+    removerCaracteres(contenido[8], caracter);
+    if (strcmp(contenido[1], columnaCdo) == 0 && atoi(contenido[8]) > 200) {
+      
+      if ((atoi(contenido[3]) < atoi(contenido[8])) && (atoi(contenido[4]) < atoi(contenido[8]))) {
+        char row[] = "<tr style=\"color:green;\"><td>";
+        strcat(row, contenido[0]);
+        strcat(row, "</td></tr>");
+        fprintf(html, "%s", row);
+      } else {
+        char row[] = "<tr><td>";
+        strcat(row, contenido[0]);
+        strcat(row, "</td></tr>");
+        fprintf(html, "%s", row);
+      }
+    }
+  }
+  return true;
+}
+
+int lecturaArchivoHTML(int opcion, FILE *csv, FILE *html) {
+  FILE *cmd = popen("C:\\Users\\vivia\\Downloads\\wget -q -O - http://localhost:5000/static/", "r");
+  char result[4096];
+  int columnNumber = 0;       
+
+  char ** results = malloc(16 * sizeof(char*));
+  for(int j = 0; j < 16; j++){
+    results[j] = (char*)malloc(50*sizeof(char));
+  }
+
+  char ** lineResults = malloc(16 * sizeof(char*));
+  for(int j = 0; j < 16; j++){
+    lineResults[j] = (char*)malloc(50*sizeof(char));
+  }
+
+  char *word; 
+  while(fgets(result, sizeof(result), cmd) != NULL) {
+    if (isTD(result) && endTD(result)) {
+      lineResults = lecturaHastaTd(result);
+      for(int i = 0; i < 15; i++)
+      {
+        if (strcmp(lineResults[i], "") != 0 && strcmp(lineResults[i], " ") != 0 && strcmp(lineResults[i], "  ") != 0){
+          sprintf(results[columnNumber], lineResults[i]);
+          columnNumber++;
+        }
+      }
+    } else{
+      if (endTD(result)) {
+        int startIndex = getIndexEndTD(result);
+        int endIndex = getIndexStartEndTD(result, startIndex);
+        word = getWordByIndexes(result, endIndex, startIndex);
+        if (strcmp(word, "") != 0 && strcmp(word, " ") != 0 && strcmp(word, "  ") != 0){
+          sprintf(results[columnNumber], word);
+          columnNumber++;
+        }
+      }
+    }
+
+    if (columnNumber >= 13) {
+      obtenerCalculo(opcion, results, csv, html);
+      columnNumber = 0;
+    }
+  }
+
   pclose(cmd);
+}
+
+int obtenerCsv(FILE *file) {
+  char encabezado[] = "Especie; Precio de compra; Precio de venta; Apertura; Promedio;";
+  fprintf(file, "%s \n", encabezado);
+  return true;
+}
+
+int obtenerInicioTabla(FILE *file) {
+  char table[] = "<HTML><BODY><table><tbody>";
+  fprintf(file, "%s \n", table);
+  return true;
+}
+
+int obtenerFinTabla(FILE *file) {
+  char table[] = "</tbody></table></BODY></HTML>";
+  fprintf(file, "%s \n", table);
+  return true;
 }
 
 int main(void) {
@@ -154,9 +303,27 @@ int main(void) {
   if (atoi(opcion) < 0 || atoi(opcion) > 4) {
     printf("Opcion invalida\n");
     return -1;
-  } 
+  }
 
-  lecturaArchivoHTML(atoi(opcion));
-  gets(opcion);
+  FILE *csv;
+  if (atoi(opcion) == 2) {
+    csv = fopen("promedio.csv", "w");
+    obtenerCsv(csv);
+  }
+
+  FILE *html;
+  if (atoi(opcion) == 3) {
+    html = fopen("table.html", "w");
+    obtenerInicioTabla(html);
+  }
+
+  lecturaArchivoHTML(atoi(opcion), csv, html);
+
+  if (atoi(opcion) == 3) {
+    obtenerFinTabla(html);
+  }
+  fclose(csv);
+  fclose(html);
+  printf("programa ejecutado exitosamente");
   return 0;
 }
